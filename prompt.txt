@@ -1,0 +1,51 @@
+" Complete the implementation in sources/cache_controller2.v.
+
+INTERFACE
+Inputs:
+    • clk 
+    • rst_n (active low reset) 
+CPU request interface:
+    • req_valid: 1-CPU making request, 0-no request 
+    • req_rw (0 = read, 1 = write) 
+    • req_addr [31:0] 
+    • req_wdata [31:0] 
+CPU response signals:
+    • resp_valid: CPU reads data when this is 1 
+    • resp_rdata [31:0]: data returned to CPU 
+Memory interface signals:
+    • mem_req_valid: 1-cache is requesting memory access 
+    • mem_req_rw: 0-read from memory, 1-write to memory 
+    • mem_addr [31:0] 
+    • mem_wdata [31:0] 
+    • mem_ready: 1-memory is ready/operation complete 
+    • mem_rdata [31:0]: data coming from memory
+CACHE ARCHITECTURE
+Single cache line only (no arrays)
+Internal registers:
+    • valid (1 bit) 
+    • dirty (1 bit) 
+    • tag (upper 20 bits of address) 
+    • data (32-bit cache line) 
+Address format:
+tag = req_addr[31:12]
+FUNCTIONAL BEHAVIOR
+READ HIT:
+    • Condition: valid = 1 AND tag match AND req_rw = 0 
+    • Output: resp_valid = 1 (1 cycle), resp_rdata = cached data 
+WRITE HIT:
+    • Condition: valid = 1 AND tag match AND req_rw = 1 
+    • Update: data = latched_req_wdata, dirty = 1 
+    • No memory access required 
+CLEAN MISS:
+    • Condition: cache miss AND not dirty 
+    • Action: 
+        ◦ Issue memory read 
+DIRTY MISS:
+    • Condition: valid = 1, dirty = 1 
+    • Action: 
+        1. WRITEBACK:
+mem_req_rw = 1
+
+2. REFILL:
+mem_req_rw = 0
+mem_addr = latched_req_addr"
