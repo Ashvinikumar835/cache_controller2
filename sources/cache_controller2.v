@@ -22,7 +22,7 @@ module cache_controller2 (
     input              mem_ready,
     input      [31:0]  mem_rdata
 );
-
+//added some logic here
     // =========================
     // STATE DEFINITIONS
     // =========================
