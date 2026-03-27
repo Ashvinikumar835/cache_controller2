@@ -51,14 +51,11 @@ async def memory_model(dut):
 
     while True:
         await RisingEdge(dut.clk)
-
         dut.mem_ready.value = 0
 
         if dut.mem_req_valid.value == 1:
-
             stall += 1
 
-            # guarantee forward progress
             if stall % 4 == 0:
                 dut.mem_ready.value = 1
 
@@ -67,21 +64,16 @@ async def memory_model(dut):
                         0xBEEF0000 | (int(dut.mem_addr.value) & 0xFFFF)
                     )
 
+
 # ============================================================
-# MAIN TEST
+# COMMON SETUP
 # ============================================================
 
-@cocotb.test()
-async def cache_controller_test(dut):
-
-    # CLOCK
+async def setup_dut(dut):
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start(start_high=False))
-
-    # MEMORY MODEL
     cocotb.start_soon(memory_model(dut))
 
-    # INIT
     dut.req_valid.value = 0
     dut.req_rw.value = 0
     dut.req_addr.value = 0
@@ -89,12 +81,17 @@ async def cache_controller_test(dut):
     dut.mem_ready.value = 0
     dut.mem_rdata.value = 0
 
-    # RESET
     await reset_dut(dut)
 
-    # ============================================================
-    # FORCE CACHE STATE
-    # ============================================================
+
+# ============================================================
+# TESTS
+# ============================================================
+
+@cocotb.test()
+async def test_read_hit(dut):
+    await setup_dut(dut)
+
     dut.valid.value = 1
     dut.tag.value   = 0x00100
     dut.data.value  = 0xA5A5A5A5
@@ -102,12 +99,23 @@ async def cache_controller_test(dut):
 
     await RisingEdge(dut.clk)
 
-    # ---------------- TEST 1: READ HIT ----------------
     await send_request(dut, 0, (0x00100 << 12))
     data = await wait_for_response(dut)
-    assert data == 0xA5A5A5A5, "READ HIT FAILED"
 
-    # ---------------- TEST 2: WRITE HIT ----------------
+    assert data == 0xA5A5A5A5
+
+
+@cocotb.test()
+async def test_write_hit(dut):
+    await setup_dut(dut)
+
+    dut.valid.value = 1
+    dut.tag.value   = 0x00100
+    dut.data.value  = 0xA5A5A5A5
+    dut.dirty.value = 0
+
+    await RisingEdge(dut.clk)
+
     await send_request(dut, 1, (0x00100 << 12), 0xDEADBEEF)
 
     for _ in range(5):
@@ -117,8 +125,17 @@ async def cache_controller_test(dut):
     assert int(dut.dirty.value) == 1
 
 
+@cocotb.test()
+async def test_multiple_writes(dut):
+    await setup_dut(dut)
 
-    # ---------------- TEST 5: MULTIPLE WRITES ----------------
+    dut.valid.value = 1
+    dut.tag.value   = 0x00100
+    dut.data.value  = 0
+    dut.dirty.value = 0
+
+    await RisingEdge(dut.clk)
+
     await send_request(dut, 1, (0x00100 << 12), 0x11111111)
     await RisingEdge(dut.clk)
 
@@ -129,17 +146,24 @@ async def cache_controller_test(dut):
 
     assert int(dut.data.value) == 0x22222222
 
-  
-    # ---------------- TEST 7: CLEAN MISS ----------------
+
+@cocotb.test()
+async def test_clean_miss(dut):
+    await setup_dut(dut)
+
     dut.valid.value = 0
     dut.dirty.value = 0
 
     await send_request(dut, 0, 0x00002000)
     data = await wait_for_response(dut, 30)
 
-    assert data is not None, "CLEAN MISS FAILED"
+    assert data is not None
 
-    # ---------------- TEST 8: DIRTY MISS ----------------
+
+@cocotb.test()
+async def test_dirty_miss(dut):
+    await setup_dut(dut)
+
     dut.valid.value = 1
     dut.dirty.value = 1
     dut.tag.value   = 0x00100
@@ -153,62 +177,32 @@ async def cache_controller_test(dut):
     for _ in range(30):
         await RisingEdge(dut.clk)
 
-        if dut.mem_req_valid.value == 1 and dut.mem_req_rw.value == 1:
+        if dut.mem_req_valid.value and dut.mem_req_rw.value:
             writeback_seen = True
 
-        if dut.resp_valid.value == 1:
+        if dut.resp_valid.value:
             response_seen = True
 
-    assert writeback_seen and response_seen, "DIRTY MISS FAILED"
-
-    print("\nALL TESTS PASSED\n")
+    assert writeback_seen and response_seen
 
 
-#########################
-# ---------------- TEST 9: CLEAN MISS ----------------
-    dut.valid.value = 0
-    dut.dirty.value = 0
+@cocotb.test()
+async def test_clean_miss_variant(dut):
+    await setup_dut(dut)
 
-    await send_request(dut, 0, 0x00001000)
-    data = await wait_for_response(dut, 30)
-
-    assert data is not None, "CLEAN MISS2 FAILED"
-
-    # ---------------- TEST 10: DIRTY MISS ----------------
-    dut.valid.value = 1
-    dut.dirty.value = 1
-    dut.tag.value   = 0x00100
-    dut.data.value  = 0xAAAA5555
-
-    await send_request(dut, 0, (0x00200 << 10))
-
-    writeback_seen = False
-    response_seen  = False
-
-    for _ in range(30):
-        await RisingEdge(dut.clk)
-
-        if dut.mem_req_valid.value == 1 and dut.mem_req_rw.value == 1:
-            writeback_seen = True
-
-        if dut.resp_valid.value == 1:
-            response_seen = True
-
-    assert writeback_seen and response_seen, "DIRTY MISS2 FAILED"
-
-    print("\nALL TESTS PASSED\n")
-
-#########################
-# ---------------- TEST 9: CLEAN MISS ----------------
     dut.valid.value = 0
     dut.dirty.value = 0
 
     await send_request(dut, 0, 0x00010000)
     data = await wait_for_response(dut, 30)
 
-    assert data is not None, "CLEAN MISS2 FAILED"
+    assert data is not None
 
-    # ---------------- TEST 10: DIRTY MISS ----------------
+
+@cocotb.test()
+async def test_dirty_miss_variant(dut):
+    await setup_dut(dut)
+
     dut.valid.value = 1
     dut.dirty.value = 1
     dut.tag.value   = 0x00100
@@ -222,24 +216,20 @@ async def cache_controller_test(dut):
     for _ in range(30):
         await RisingEdge(dut.clk)
 
-        if dut.mem_req_valid.value == 1 and dut.mem_req_rw.value == 1:
+        if dut.mem_req_valid.value and dut.mem_req_rw.value:
             writeback_seen = True
 
-        if dut.resp_valid.value == 1:
+        if dut.resp_valid.value:
             response_seen = True
 
-    assert writeback_seen and response_seen, "DIRTY MISS2 FAILED"
-
-    print("\nALL TESTS PASSED\n")
+    assert writeback_seen and response_seen
 
 
 # ============================================================
-# RUNNER (PYTEST ENTRY)
+# RUNNER
 # ============================================================
 
 def test_cache_controller2():
-    """Pytest entry point for cocotb runner"""
-
     sim = os.getenv("SIM", "icarus")
 
     proj_path = Path(__file__).resolve().parent.parent
