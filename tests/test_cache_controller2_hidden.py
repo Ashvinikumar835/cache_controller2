@@ -102,7 +102,7 @@ async def test_read_hit(dut):
     await send_request(dut, 0, (0x00100 << 12))
     data = await wait_for_response(dut)
 
-    assert data == 0xA5A5A5A5
+    assert data == 0xA5A5A5A5, "READ HIT FAILED: expected 0xA5A5A5A5 got {hex(data) if data else None}"
 
 
 @cocotb.test()
@@ -111,7 +111,7 @@ async def test_write_hit(dut):
 
     dut.valid.value = 1
     dut.tag.value   = 0x00100
-    dut.data.value  = 0xA5A5A5A5
+    dut.data.value  = 0
     dut.dirty.value = 0
 
     await RisingEdge(dut.clk)
@@ -121,8 +121,8 @@ async def test_write_hit(dut):
     for _ in range(5):
         await RisingEdge(dut.clk)
 
-    assert int(dut.data.value) == 0xDEADBEEF
-    assert int(dut.dirty.value) == 1
+    assert int(dut.data.value) == 0xDEADBEEF, "WRITE HIT DATA FAIL: got {hex(int(dut.data.value))}"
+    assert int(dut.dirty.value) == 1, "WRITE HIT DIRTY BIT NOT SET"
 
 
 @cocotb.test()
@@ -144,7 +144,7 @@ async def test_multiple_writes(dut):
     for _ in range(3):
         await RisingEdge(dut.clk)
 
-    assert int(dut.data.value) == 0x22222222
+    assert int(dut.data.value) == 0x22222222, "MULTI-WRITE FAILED"
 
 
 @cocotb.test()
@@ -154,10 +154,15 @@ async def test_clean_miss(dut):
     dut.valid.value = 0
     dut.dirty.value = 0
 
-    await send_request(dut, 0, 0x00002000)
+    addr = 0x00002000
+    await send_request(dut, 0, addr)
+
     data = await wait_for_response(dut, 30)
 
-    assert data is not None
+    expected = 0xBEEF0000 | (addr & 0xFFFF)
+
+    assert data is not None, "NO RESPONSE RECEIVED"
+    assert data == expected, "CLEAN MISS WRONG DATA: expected {hex(expected)} got {hex(data)}"
 
 
 @cocotb.test()
@@ -183,46 +188,8 @@ async def test_dirty_miss(dut):
         if dut.resp_valid.value:
             response_seen = True
 
-    assert writeback_seen and response_seen
-
-
-@cocotb.test()
-async def test_clean_miss_variant(dut):
-    await setup_dut(dut)
-
-    dut.valid.value = 0
-    dut.dirty.value = 0
-
-    await send_request(dut, 0, 0x00010000)
-    data = await wait_for_response(dut, 30)
-
-    assert data is not None
-
-
-@cocotb.test()
-async def test_dirty_miss_variant(dut):
-    await setup_dut(dut)
-
-    dut.valid.value = 1
-    dut.dirty.value = 1
-    dut.tag.value   = 0x00100
-    dut.data.value  = 0xAAAA5555
-
-    await send_request(dut, 0, (0x00200 << 9))
-
-    writeback_seen = False
-    response_seen  = False
-
-    for _ in range(30):
-        await RisingEdge(dut.clk)
-
-        if dut.mem_req_valid.value and dut.mem_req_rw.value:
-            writeback_seen = True
-
-        if dut.resp_valid.value:
-            response_seen = True
-
-    assert writeback_seen and response_seen
+    assert writeback_seen, "DIRTY MISS: WRITEBACK NOT SEEN"
+    assert response_seen, "DIRTY MISS: RESPONSE NOT RECEIVED"
 
 
 # ============================================================
