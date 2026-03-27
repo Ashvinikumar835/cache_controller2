@@ -1,0 +1,12 @@
+<testsuites name="results">
+  <testsuite name="all" package="all">
+    <property name="random_seed" value="1774603168" />
+    <testcase name="test_read_hit" classname="test_cache_controller2_hidden" file="/home/ashvinikumar/phinity/cursor/cache_controller2/cache_controller2/tests/test_cache_controller2_hidden.py" lineno="91" time="0.0014660358428955078" sim_time_ns="115.0" ratio_time="78442.82972841112" />
+    <testcase name="test_write_hit" classname="test_cache_controller2_hidden" file="/home/ashvinikumar/phinity/cursor/cache_controller2/cache_controller2/tests/test_cache_controller2_hidden.py" lineno="108" time="0.0008978843688964844" sim_time_ns="125.0" ratio_time="139216.1444503452" />
+    <testcase name="test_multiple_writes" classname="test_cache_controller2_hidden" file="/home/ashvinikumar/phinity/cursor/cache_controller2/cache_controller2/tests/test_cache_controller2_hidden.py" lineno="128" time="0.0007491111755371094" sim_time_ns="125.0" ratio_time="166864.41756842774" />
+    <testcase name="test_clean_miss" classname="test_cache_controller2_hidden" file="/home/ashvinikumar/phinity/cursor/cache_controller2/cache_controller2/tests/test_cache_controller2_hidden.py" lineno="150" time="0.0009911060333251953" sim_time_ns="175.00000000000006" ratio_time="176570.41135434213" />
+    <testcase name="test_dirty_miss" classname="test_cache_controller2_hidden" file="/home/ashvinikumar/phinity/cursor/cache_controller2/cache_controller2/tests/test_cache_controller2_hidden.py" lineno="163" time="0.0018413066864013672" sim_time_ns="365.0" ratio_time="198228.79192023826" />
+    <testcase name="test_clean_miss_variant" classname="test_cache_controller2_hidden" file="/home/ashvinikumar/phinity/cursor/cache_controller2/cache_controller2/tests/test_cache_controller2_hidden.py" lineno="189" time="0.0009403228759765625" sim_time_ns="175.0000000000001" ratio_time="186106.28803245447" />
+    <testcase name="test_dirty_miss_variant" classname="test_cache_controller2_hidden" file="/home/ashvinikumar/phinity/cursor/cache_controller2/cache_controller2/tests/test_cache_controller2_hidden.py" lineno="202" time="0.0018286705017089844" sim_time_ns="365.0" ratio_time="199598.56062581486" />
+  </testsuite>
+</testsuites>
